@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Game Jam</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game" width="160" height="240"></canvas>
+
+    <div id="hud">
+      <div class="hud-row"><span id="hud-time"></span><span id="hud-best"></span></div>
+      <div class="hud-row"><span id="hud-logs"></span><span id="hud-leaves"></span></div>
+    </div>
+
+    <div id="popups"></div>
+
+    <div id="overlay">
+      <h1 id="overlay-title">GAME JAM</h1>
+      <p id="overlay-body"></p>
+      <button id="overlay-btn" type="button">START</button>
+    </div>
+
+    <button id="mute" type="button" aria-label="Toggle sound">&#9834;</button>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
