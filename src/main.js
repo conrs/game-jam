@@ -50,6 +50,9 @@ const ui = {
   scores: document.getElementById('scores'),
   you: document.getElementById('you'),
   nameHint: document.getElementById('name-hint'),
+  levels: document.querySelectorAll('input[data-level]'),
+  playerStatus: document.getElementById('player-status'),
+  playerBtn: document.getElementById('player-btn'),
   mute: document.getElementById('mute'),
   fullscreen: document.getElementById('fullscreen'),
 };
@@ -357,8 +360,7 @@ function endRun() {
     myBoard = r;
     if (s !== run) return;
     showResult(`${best ? 'NEW BEST! ' : ''}#${r.rank} worldwide`);
-    // Only Betacade's play page can sign players in (its menu, not ours).
-    ui.nameHint.hidden = r.named || window.wt?.host !== 'betacade';
+    ui.nameHint.hidden = r.named; // Settings can sign them in, on Betacade or elsewhere
   });
 }
 
@@ -523,11 +525,12 @@ function showScreen(name) {
   stage.classList.toggle('menu-open', Boolean(name));
   for (const el of ui.screens) el.hidden = el.dataset.screen !== name;
   if (name === 'leaderboard') renderScores();
+  if (name === 'settings') renderSettings();
   if (!name) {
     document.activeElement?.blur();
     return;
   }
-  ui.overlay.querySelector(`[data-screen="${name}"] button`)?.focus({ preventScroll: true });
+  ui.overlay.querySelector(`[data-screen="${name}"] :is(button, input)`)?.focus({ preventScroll: true });
 }
 
 function boardMessage(text) {
@@ -567,7 +570,7 @@ function menuAction(action) {
 
 // Arrow keys move between the visible buttons; Enter/Space press the focused one natively.
 function moveFocus(step) {
-  const buttons = [...ui.overlay.querySelectorAll('.screen:not([hidden]) button')];
+  const buttons = [...ui.overlay.querySelectorAll('.screen:not([hidden]) :is(button, input)')];
   const i = buttons.indexOf(document.activeElement);
   buttons[(i + step + buttons.length) % buttons.length]?.focus({ preventScroll: true });
 }
@@ -608,7 +611,7 @@ window.addEventListener('keydown', (e) => {
       moveFocus(e.key === 'ArrowDown' ? 1 : -1);
     } else if (e.key === 'Escape') {
       menuAction('menu');
-    } else if ((e.key === 'Enter' || e.key === ' ') && !(document.activeElement instanceof HTMLButtonElement)) {
+    } else if ((e.key === 'Enter' || e.key === ' ') && !(document.activeElement instanceof HTMLButtonElement || document.activeElement instanceof HTMLInputElement)) {
       e.preventDefault();
       moveFocus(0);
     }
@@ -648,6 +651,50 @@ ui.fullscreen.hidden = !document.fullscreenEnabled;
 document.addEventListener('fullscreenchange', () => {
   ui.fullscreen.setAttribute('aria-pressed', String(Boolean(document.fullscreenElement)));
 });
+// --- Settings ------------------------------------------------------------------
+
+// Sliders run 0-10; the audio module keeps levels as 0-1.
+function renderSettings() {
+  for (const input of ui.levels) input.value = String(Math.round(sfx.getLevel(input.dataset.level) * 10));
+  renderPlayer(window.wt?.player);
+}
+
+for (const input of ui.levels) {
+  input.addEventListener('input', () => {
+    sfx.unlock();
+    sfx.setLevel(input.dataset.level, Number(input.value) / 10);
+  });
+  // A sample at the new level once the slider settles.
+  input.addEventListener('change', () => (input.dataset.level === 'sfx' ? sfx.rescue() : null));
+}
+
+// Betacade sign-in. The player chooses in Betacade's own menu (on Betacade) or window
+// (elsewhere); the game only opens it and shows the result.
+function renderPlayer(p) {
+  const player = p ?? { signedIn: false, showName: false, name: null };
+  if (!player.signedIn) {
+    ui.playerStatus.textContent = 'Signed out. Sign in to put your name on the leaderboard.';
+    ui.playerBtn.textContent = 'SIGN IN';
+    ui.playerBtn.dataset.menu = 'signin';
+  } else if (!player.showName) {
+    ui.playerStatus.textContent = 'Signed in. Your name is hidden on the leaderboard.';
+    ui.playerBtn.textContent = 'SHOW MY NAME';
+    ui.playerBtn.dataset.menu = 'leaderboard';
+  } else {
+    ui.playerStatus.textContent = `On the leaderboard as ${player.name}.`;
+    ui.playerBtn.textContent = 'NAME SETTINGS';
+    ui.playerBtn.dataset.menu = 'leaderboard';
+  }
+}
+
+// openMenu has to run inside the click: off Betacade it opens a window, which browsers
+// only allow from a gesture.
+ui.playerBtn.addEventListener('click', () => {
+  sfx.unlock();
+  window.wt?.openMenu?.(ui.playerBtn.dataset.menu);
+});
+window.wt?.onPlayer?.(renderPlayer);
+
 ui.fullscreen.addEventListener('click', () => {
   sfx.unlock();
   toggleFullscreen();

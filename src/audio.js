@@ -3,9 +3,11 @@
 
 let ac = null;
 let master = null;
-let muted = false;
+let musicBus = null; // music and sound effects each have a player-set level into master
+let sfxBus = null;
 const SETTINGS_KEY = 'game-jam:settings'; // namespaced: itch.io shares one origin across games
 const VOLUME = 0.5;
+const settings = { muted: false, music: 1, sfx: 1 }; // levels 0..1
 
 // Music tracks by name.
 const TRACKS = {
@@ -23,9 +25,19 @@ const bytes = Object.fromEntries(
 );
 
 try {
-  muted = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').muted === true;
+  const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+  settings.muted = saved.muted === true;
+  for (const k of ['music', 'sfx']) if (typeof saved[k] === 'number') settings[k] = Math.min(1, Math.max(0, saved[k]));
 } catch {
-  // Storage blocked: default to sound on.
+  // Storage blocked: default to sound on, full levels.
+}
+
+function persistSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    // Not persisted; fine.
+  }
 }
 
 export function unlock() {
@@ -34,8 +46,14 @@ export function unlock() {
     if (!AC) return;
     ac = new AC();
     master = ac.createGain();
-    master.gain.value = muted ? 0 : VOLUME;
+    master.gain.value = settings.muted ? 0 : VOLUME;
     master.connect(ac.destination);
+    musicBus = ac.createGain();
+    musicBus.gain.value = settings.music;
+    musicBus.connect(master);
+    sfxBus = ac.createGain();
+    sfxBus.gain.value = settings.sfx;
+    sfxBus.connect(master);
     Object.keys(TRACKS).forEach(track);
     music(wanted);
   }
@@ -43,13 +61,13 @@ export function unlock() {
 }
 
 // Tracks are decoded into memory and looped by WebAudio: <audio loop> leaves a gap at
-// the loop point in most browsers. Each plays through its own gain into master, so
-// mute covers music too.
+// the loop point in most browsers. Each plays through its own gain into the music bus,
+// so the music level and mute cover it.
 function track(name) {
   if (!playing[name]) {
     const gain = ac.createGain();
     gain.gain.value = 0;
-    gain.connect(master);
+    gain.connect(musicBus);
     const buffer = bytes[name].then((b) => ac.decodeAudioData(b));
     buffer.catch(() => {}); // a missing track just stays silent
     playing[name] = { gain, buffer, source: null };
@@ -103,18 +121,26 @@ export function pauseMusic(paused) {
 }
 
 export function isMuted() {
-  return muted;
+  return settings.muted;
 }
 
 export function toggleMute() {
-  muted = !muted;
-  if (master) master.gain.value = muted ? 0 : VOLUME;
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ muted }));
-  } catch {
-    // Not persisted; fine.
-  }
-  return muted;
+  settings.muted = !settings.muted;
+  if (master) master.gain.value = settings.muted ? 0 : VOLUME;
+  persistSettings();
+  return settings.muted;
+}
+
+// Player-set levels, 0..1: 'music' or 'sfx'.
+export function getLevel(kind) {
+  return settings[kind];
+}
+
+export function setLevel(kind, value) {
+  settings[kind] = Math.min(1, Math.max(0, value));
+  const bus = kind === 'music' ? musicBus : sfxBus;
+  if (bus) bus.gain.value = settings[kind];
+  persistSettings();
 }
 
 function tone(freq, dur, { type = 'triangle', vol = 0.1, to = null, at = 0 } = {}) {
@@ -127,7 +153,7 @@ function tone(freq, dur, { type = 'triangle', vol = 0.1, to = null, at = 0 } = {
   if (to) o.frequency.exponentialRampToValueAtTime(to, t0 + dur);
   g.gain.setValueAtTime(vol, t0);
   g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-  o.connect(g).connect(master);
+  o.connect(g).connect(sfxBus);
   o.start(t0);
   o.stop(t0 + dur + 0.02);
 }
@@ -147,7 +173,7 @@ function noise(dur, { vol = 0.3, freq = 800, type = 'lowpass', at = 0, attack = 
   g.gain.setValueAtTime(attack ? 0.001 : vol, t0);
   if (attack) g.gain.exponentialRampToValueAtTime(vol, t0 + attack);
   g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-  src.connect(f).connect(g).connect(master);
+  src.connect(f).connect(g).connect(sfxBus);
   src.start(t0);
 }
 

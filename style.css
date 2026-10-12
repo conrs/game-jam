@@ -210,6 +210,32 @@ body {
 .credits dt:first-child { margin-top: 0; }
 .credits dd { margin: 0; }
 
+/* Settings: label + slider rows, then the Betacade sign-in block. */
+.levels {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: calc(var(--px, 1px) * 3) calc(var(--px, 1px) * 4);
+  width: 100%;
+  font-size: calc(var(--px, 1px) * 6);
+}
+.levels label { text-align: left; color: #f5a030; }
+.levels input {
+  width: 100%;
+  margin: 0;
+  accent-color: #f5a030;
+  cursor: pointer;
+}
+.levels input:focus-visible { outline: calc(var(--px, 1px) * 1) solid #fff1d6; outline-offset: calc(var(--px, 1px) * 1); }
+.settings-heading {
+  margin: calc(var(--px, 1px) * 2) 0 0;
+  font-size: calc(var(--px, 1px) * 6);
+  font-weight: normal;
+  color: #f5a030;
+  letter-spacing: 0.1em;
+}
+#overlay #player-status { margin-top: calc(var(--px, 1px) * -4); line-height: 1.4; }
+
 button {
   font: inherit;
   color: #1a1020;

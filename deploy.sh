@@ -166,7 +166,9 @@ echo "This build:    $(json_get buildUrl <<<"$RESP")"
 
 mkdir -p "$ROOT/dist"
 ITCH_ZIP="$ROOT/dist/the-last-leaf-itch-build$NUMBER.zip"
-sed -i '' "s/data-build=\"[0-9]*\"/data-build=\"$NUMBER\"/" "$WORK/build/index.html"
+# Tag it with the itch.io tracked link (in .betacade-itch-via), so its play counts there.
+VIA="$(cat "$ROOT/.betacade-itch-via")"
+sed -i '' "s/data-build=\"[0-9]*\"/data-build=\"$NUMBER\" data-via=\"$VIA\"/" "$WORK/build/index.html"
 rm -f "$ITCH_ZIP"
 (cd "$WORK/build" && zip -qr "$ITCH_ZIP" .)
 echo "itch.io zip:   $ITCH_ZIP"

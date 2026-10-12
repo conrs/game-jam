@@ -29,8 +29,10 @@ jobs:
           curl -sS --fail-with-body -T /tmp/build.tar.gz "$(echo "$start" | jq -r .uploadUrl)"
           curl -sS --fail-with-body -X POST "$API/v1/games/$GAME_ID/builds/$number/finalize" \
             -H "Authorization: Bearer $BETACADE_TOKEN" | jq '{number, status, warnings, playUrl, buildUrl}'
-          # itch.io copy: tell betacade.js which build these files are.
-          sed -i "s/data-build=\"[0-9]*\"/data-build=\"$number\"/" /tmp/build/index.html
+          # itch.io copy: tell betacade.js which build these files are, and tag its
+          # play with the itch.io tracked link (.betacade-itch-via).
+          via="$(cat .betacade-itch-via)"
+          sed -i "s/data-build=\"[0-9]*\"/data-build=\"$number\" data-via=\"$via\"/" /tmp/build/index.html
           echo "number=$number" >> "$GITHUB_OUTPUT"
       - name: Keep the itch.io copy
         uses: actions/upload-artifact@v4

@@ -36,10 +36,12 @@ It uses the same Betacade token as Hold Fast (`~/.config/betacade/token`). The g
 
 ## itch.io
 
-`betacade.js` (Betacade's SDK, 1.1.0) ships in every build, so copies hosted elsewhere still send play data to the same Betacade game. Each copy has to name its Betacade build in `data-build` on the script tag (the repo keeps `0`, which sends nothing). Both deploy paths make a stamped copy:
+`betacade.js` (Betacade's SDK, 1.3.0) ships in every build, so copies hosted elsewhere still send play data to the same Betacade game. Each copy has to name its Betacade build in `data-build` on the script tag (the repo keeps `0`, which sends nothing). Both deploy paths make a stamped copy:
 
 - `./deploy.sh` writes `dist/the-last-leaf-itch-build<N>.zip`.
 - The GitHub Actions run keeps it as the `the-last-leaf-itch-build<N>` artifact.
+
+The itch.io copy is also tagged with the `itch.io` tracked link (its code is in `.betacade-itch-via`), so the studio counts itch players and sessions separately. Players there can sign in to Betacade from Settings.
 
 On itch.io: Kind of project → HTML, upload the zip, tick "This file will be played in the browser".
 
@@ -48,6 +50,7 @@ On itch.io: Kind of project → HTML, upload the zip, tick "This file will be pl
 - Save: `localStorage["game-jam:save"]` = `{ bestTime, runs }` (namespaced because itch.io shares one origin; older builds used `save`, migrated on Betacade only)
 - Events: `run.start`, `run.end` (`time`, `rescues`, `best`)
 - Leaderboard: `wt.submitScore(seconds)` at the end of each run (higher wins); `wt.scores({ limit: 10 })` fills the Leaderboard screen
+- Sign-in: Settings shows `wt.player` (updated by `wt.onPlayer`) and its button calls `wt.openMenu('signin' | 'leaderboard')`
 - Pause: `wt:pause` / `wt:resume`
 
 ## Tuning

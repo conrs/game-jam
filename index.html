@@ -34,6 +34,7 @@
         <nav class="menu">
           <button type="button" data-action="play">PLAY</button>
           <button type="button" data-action="leaderboard">LEADERBOARD</button>
+          <button type="button" data-action="settings">SETTINGS</button>
           <button type="button" data-action="credits">CREDITS</button>
         </nav>
         <p class="hint">Tap a fire pit (or 1-5) to burn a log.<br>Warm air lifts the leaves back up.</p>
@@ -44,6 +45,20 @@
         <p class="sub">Longest winters held off, everywhere</p>
         <ol id="scores"></ol>
         <p id="you" class="sub"></p>
+        <button type="button" data-action="menu">BACK</button>
+      </section>
+
+      <section class="screen panel" data-screen="settings" hidden>
+        <h2>SETTINGS</h2>
+        <div class="levels">
+          <label for="level-music">MUSIC</label>
+          <input type="range" id="level-music" data-level="music" min="0" max="10" step="1">
+          <label for="level-sfx">SOUND</label>
+          <input type="range" id="level-sfx" data-level="sfx" min="0" max="10" step="1">
+        </div>
+        <h3 class="settings-heading">BETACADE</h3>
+        <p id="player-status" class="sub"></p>
+        <button type="button" id="player-btn">SIGN IN</button>
         <button type="button" data-action="menu">BACK</button>
       </section>
 
@@ -67,7 +82,7 @@
       <section class="screen" data-screen="gameover" hidden>
         <h2 class="gameover-title">FIRST SNOW</h2>
         <p id="result"></p>
-        <p id="name-hint" class="hint" hidden>Sign in from Betacade's menu<br>to put your name on the board.</p>
+        <p id="name-hint" class="hint" hidden>Sign in from Settings<br>to put your name on the board.</p>
         <nav class="menu">
           <button type="button" data-action="play">TRY AGAIN</button>
           <button type="button" data-action="menu">MENU</button>

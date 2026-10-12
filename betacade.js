@@ -1,4 +1,4 @@
-/*! betacade.js 1.1.0 | https://betacade.com/llms.txt | the same window.wt on Betacade and anywhere else */
+/*! betacade.js 1.3.0 | https://betacade.com/llms.txt | the same window.wt on Betacade and anywhere else */
 // The Betacade library. A game ships this file in its build (it never loads it from us) and calls
 // Betacade.init({game, build}) before its own code, or uses the tag form:
 //   <script src="betacade.js" data-game="<slug>" data-build="<number>"></script>
@@ -32,7 +32,7 @@
   } catch (e) {}
 })(typeof window !== "undefined" ? window : typeof self !== "undefined" ? self : this, function (W) {
   "use strict";
-  var VERSION = "1.1.0",
+  var VERSION = "1.3.0",
     API = "https://api.betacade.com",
     PRIVACY = "https://betacade.com/privacy.html",
     SLUG = /^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$/,
@@ -51,11 +51,13 @@
       achievements: function () { return typeof Promise === "function" ? Promise.resolve([]) : null; },
       submitScore: function () { return typeof Promise === "function" ? Promise.resolve(null) : null; },
       scores: function () { return typeof Promise === "function" ? Promise.resolve([]) : null; },
+      openMenu: noop, onPlayer: unsub,
     };
     for (var k in d) if (has.call(d, k) && typeof o[k] !== "function") o[k] = d[k];
     if (typeof o.replaying !== "boolean") o.replaying = false;
     if (o.replayMode === undefined) o.replayMode = null;
     if (!("paused" in o)) o.paused = false;
+    if (!o.player || typeof o.player !== "object") o.player = { signedIn: false, showName: false, name: null };
     if (typeof o.save !== "function") {
       // No saves in a replay: the replay shows a save, it mustn't change it.
       o.save = function (key, value) {
@@ -309,6 +311,7 @@
         if (!s || typeof s.sessionId !== "string") return;
         if (stopped) { call("sessions/" + s.sessionId + "/end", { sessionSecret: s.sessionSecret }, true)["catch"](noop); return; }
         S = s; tries = 0;
+        setPlayer(s.player);
         HB = setInterval(beat, Math.max(10, Number(s.heartbeatSeconds) || 30) * 1000);
         pend.splice(0, pend.length).forEach(sendError);
         SQ.splice(0, SQ.length).forEach(function (f) { f(); });
@@ -319,6 +322,56 @@
         if (tries < 3) setTimeout(open, 15000 * Math.pow(2, tries++));
       });
     }
+    // Sign-in (wt.openMenu): a Betacade window where the player signs in and approves; this page
+    // only polls for the answer, so it works even when the window loses its link back here. The
+    // window opens at once (still the player's click), then goes to the address the API gives.
+    var PL = [];
+    function setPlayer(p) {
+      if (!p || typeof p !== "object") return;
+      var v = { signedIn: p.signedIn === true, showName: p.showName === true, name: p.showName === true && typeof p.name === "string" ? p.name : null };
+      wt.player = v;
+      PL.slice().forEach(function (f) { try { f(v); } catch (e) { setTimeout(function () { throw e; }, 0); } });
+    }
+    wt.onPlayer = function (cb) {
+      if (typeof cb !== "function") return noop;
+      PL.push(cb);
+      return function () { var i = PL.indexOf(cb); if (i >= 0) PL.splice(i, 1); };
+    };
+    var asking = false;
+    wt.openMenu = function () {
+      if (stopped || asking) return;
+      asking = true;
+      var feat = "popup,width=480,height=720", w = null;
+      try { w = W.open("", "betacade-connect", feat); } catch (e) {}
+      call("connect", { slug: slug, playerKey: key })
+        .then(function (r) { return r.status === 201 ? r.json() : null; })
+        .then(function (c) {
+          if (!c || typeof c.url !== "string" || !/^https?:\/\//.test(c.url) || typeof c.connectId !== "string") throw new Error("no connect");
+          if (w && !w.closed) w.location.href = c.url;
+          else {
+            try { w = W.open(c.url, "betacade-connect", feat); } catch (e) { w = null; }
+            if (!w) con("warn", "the browser blocked the sign-in window; allow pop-ups for this page");
+          }
+          var every = Math.max(2, Number(c.interval) || 3) * 1000, until = Date.now() + (Number(c.expiresIn) || 600) * 1000, after = 0;
+          (function poll() {
+            setTimeout(function () {
+              call("connect/" + c.connectId + "/status", { playerKey: key })
+                .then(function (r) { return r.status === 200 ? r.json() : null; })
+                .then(function (x) {
+                  var st = x && x.status;
+                  if (st === "approved") setPlayer(x.player);
+                  // A closed window may have answered just before: two more looks, then stop.
+                  if (w && w.closed) after++;
+                  if (st === "pending" && Date.now() < until && after < 3) poll(); else asking = false;
+                }, function () { if (Date.now() < until) poll(); else asking = false; });
+            }, every);
+          })();
+        })["catch"](function () {
+          asking = false;
+          try { if (w && !w.closed) w.close(); } catch (e) {}
+        });
+    };
+
     // wt.submitScore: the player's best is kept on the board. Sent once the session is open (up to
     // 15 s); null when it can't be.
     var SQ = [];
