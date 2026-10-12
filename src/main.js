@@ -16,6 +16,7 @@ const LIFT = 62;                        // warm-air lift at full heat, near the 
 const MAX_LOGS = 4;
 const FUEL_PER_LOG = 5;
 const MAX_FUEL = 12;
+const MAX_SCORES = 10;                  // runs kept on the leaderboard
 
 const LEAF_COLORS = ['#e0642c', '#f0a030', '#c8382c', '#f5c84a', '#a8452a'];
 const LEAF_FRAMES = [
@@ -36,9 +37,9 @@ const ui = {
   leaves: document.getElementById('hud-leaves'),
   popups: document.getElementById('popups'),
   overlay: document.getElementById('overlay'),
-  title: document.getElementById('overlay-title'),
-  body: document.getElementById('overlay-body'),
-  btn: document.getElementById('overlay-btn'),
+  screens: document.querySelectorAll('.screen'),
+  result: document.getElementById('result'),
+  scores: document.getElementById('scores'),
   mute: document.getElementById('mute'),
 };
 
@@ -46,11 +47,13 @@ const ui = {
 
 const save = (() => {
   try {
-    return { bestTime: 0, runs: 0, ...JSON.parse(localStorage.getItem('save') || '{}') };
+    return { bestTime: 0, runs: 0, scores: [], ...JSON.parse(localStorage.getItem('save') || '{}') };
   } catch {
-    return { bestTime: 0, runs: 0 };
+    return { bestTime: 0, runs: 0, scores: [] };
   }
 })();
+
+let latestRun = null; // highlights this session's latest run on the leaderboard
 
 function persist() {
   try {
@@ -159,7 +162,8 @@ function startRun() {
   save.runs++;
   track('run.start', { run: save.runs });
   sfx.start();
-  ui.overlay.hidden = true;
+  sfx.music('game');
+  showScreen(null);
 }
 
 // --- Difficulty ramps with time --------------------------------------------------
@@ -306,6 +310,7 @@ function update(dt) {
   if (counts().ground === LEAF_COUNT) {
     s.phase = 'storm';
     sfx.snow();
+    sfx.music('menu');
   }
 }
 
@@ -317,14 +322,18 @@ function updateStorm(dt) {
 function endRun() {
   const best = s.t > save.bestTime;
   save.bestTime = Math.max(save.bestTime, s.t);
+  const entry = { time: s.t, rescues: s.rescues, at: Date.now() };
+  save.scores = [...save.scores, entry].sort((a, b) => b.time - a.time).slice(0, MAX_SCORES);
+  const rank = save.scores.indexOf(entry) + 1;
+  latestRun = entry.at;
   persist();
   track('run.end', { time: Math.round(s.t), rescues: s.rescues, best });
   s.phase = 'over';
-  showOverlay(
-    'FIRST SNOW',
-    `The last leaf touched the ground.\nWinter held off for\n\n${fmtTime(s.t)}\n\n${best ? 'NEW BEST!' : `Best ${fmtTime(save.bestTime)}`}\nLeaves rescued: ${s.rescues}`,
-    'TRY AGAIN',
-  );
+  ui.result.textContent =
+    `The last leaf touched the ground.\nWinter held off for\n\n${fmtTime(s.t)}\n\n` +
+    `${best ? 'NEW BEST!' : rank ? `#${rank} on the leaderboard` : `Best ${fmtTime(save.bestTime)}`}\n` +
+    `Leaves rescued: ${s.rescues}`;
+  showScreen('gameover');
 }
 
 // --- Particles: sparks + snow -------------------------------------------------
@@ -490,11 +499,51 @@ function popup(text, x, y, kind = '') {
   setTimeout(() => el.remove(), 1300);
 }
 
-function showOverlay(title, body, btn) {
-  ui.title.textContent = title;
-  ui.body.textContent = body;
-  ui.btn.textContent = btn;
-  ui.overlay.hidden = false;
+// Show one menu screen by name (menu, leaderboard, credits, gameover), or null to play.
+function showScreen(name) {
+  ui.overlay.hidden = !name;
+  stage.classList.toggle('menu-open', Boolean(name));
+  for (const el of ui.screens) el.hidden = el.dataset.screen !== name;
+  if (name === 'leaderboard') renderScores();
+  if (!name) {
+    document.activeElement?.blur();
+    return;
+  }
+  ui.overlay.querySelector(`[data-screen="${name}"] button`)?.focus({ preventScroll: true });
+}
+
+function renderScores() {
+  const rows = save.scores.map((r, i) => {
+    const li = document.createElement('li');
+    li.classList.toggle('new', r.at === latestRun);
+    const date = new Date(r.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    for (const text of [`#${i + 1}`, fmtTime(r.time), `${r.rescues} saved`, date]) {
+      const span = document.createElement('span');
+      span.textContent = text;
+      li.append(span);
+    }
+    return li;
+  });
+  if (!rows.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = 'No winters held off yet.';
+    rows.push(li);
+  }
+  ui.scores.replaceChildren(...rows);
+}
+
+function menuAction(action) {
+  if (action === 'play') return startRun();
+  if (action === 'menu' && s.phase === 'over') s = makeState('title'); // fresh tree behind the menu
+  showScreen(action);
+}
+
+// Arrow keys move between the visible buttons; Enter/Space press the focused one natively.
+function moveFocus(step) {
+  const buttons = [...ui.overlay.querySelectorAll('.screen:not([hidden]) button')];
+  const i = buttons.indexOf(document.activeElement);
+  buttons[(i + step + buttons.length) % buttons.length]?.focus({ preventScroll: true });
 }
 
 function fitStage() {
@@ -525,9 +574,16 @@ window.addEventListener('keydown', (e) => {
     lightFire(Number(e.key) - 1);
   } else if (e.key === 'm' || e.key === 'M') {
     updateMute(sfx.toggleMute());
-  } else if ((e.key === 'Enter' || e.key === ' ') && !ui.overlay.hidden) {
-    e.preventDefault();
-    startRun();
+  } else if (!ui.overlay.hidden) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      moveFocus(e.key === 'ArrowDown' ? 1 : -1);
+    } else if (e.key === 'Escape') {
+      menuAction('menu');
+    } else if ((e.key === 'Enter' || e.key === ' ') && !(document.activeElement instanceof HTMLButtonElement)) {
+      e.preventDefault();
+      moveFocus(0);
+    }
   }
 });
 
@@ -536,9 +592,13 @@ function updateMute(muted) {
 }
 
 canvas.addEventListener('pointerdown', onPointer);
-ui.btn.addEventListener('click', () => {
+// Any tap on the title screen starts the menu music (browsers block sound until a gesture).
+ui.overlay.addEventListener('pointerdown', () => sfx.unlock());
+ui.overlay.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
   sfx.unlock();
-  startRun();
+  menuAction(btn.dataset.action);
 });
 ui.mute.addEventListener('click', () => {
   sfx.unlock();
@@ -561,17 +621,14 @@ function frame(now) {
 }
 
 // Betacade freezes rAF while paused; reset the frame delta so we don't jump on resume.
-window.addEventListener('wt:pause', () => { paused = true; });
-window.addEventListener('wt:resume', () => { paused = false; last = null; });
+window.addEventListener('wt:pause', () => { paused = true; sfx.pauseMusic(true); });
+window.addEventListener('wt:resume', () => { paused = false; last = null; sfx.pauseMusic(false); });
 
 window.addEventListener('resize', fitStage);
 fitStage();
 buildTree();
 updateMute(sfx.isMuted());
 s = makeState('title');
-showOverlay(
-  'GAME JAM',
-  'An old story says the first\nsnow can\'t fall until every\nleaf has touched the ground.\n\nTap a fire pit (or 1-5) to\nburn a log. Warm air lifts\nthe leaves back up.\n\nHold off winter.',
-  'START',
-);
+sfx.music('menu');
+showScreen('menu');
 requestAnimationFrame(frame);

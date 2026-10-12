@@ -16,7 +16,7 @@ jobs:
           set -euo pipefail
           GAME_ID="$(cat .betacade-game)"
           mkdir /tmp/build
-          cp -R index.html style.css src /tmp/build/
+          cp -R index.html style.css src assets /tmp/build/
           tar -czf /tmp/build.tar.gz -C /tmp/build .
           size=$(stat -c %s /tmp/build.tar.gz)
           start=$(curl -sS --fail-with-body -X POST "$API/v1/games/$GAME_ID/builds" \

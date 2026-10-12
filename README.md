@@ -6,6 +6,13 @@ An old story says the first snow can't fall until every leaf has touched the gro
 
 The game gets harder over time: leaves fall faster and in bigger flurries, gusts get stronger, fires burn quicker and logs arrive more slowly.
 
+## Credits
+
+Code is MIT (see `LICENSE`). Music in `assets/` is not covered by the MIT license:
+
+- `assets/menu.mp3`: "Home at Last" by Matthew Z. (Matyze), [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), from [OpenGameArt](https://opengameart.org/content/home-at-last).
+- `assets/game.mp3`: "Around the Fireplace" by Matthew Z. (Matyze), [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), from [OpenGameArt](https://opengameart.org/content/around-the-fireplace).
+
 ## Run locally
 
 ```sh

@@ -1,10 +1,20 @@
-// Sound effects synthesized with WebAudio: no audio files.
+// Sound effects synthesized with WebAudio; music streamed from assets/ (credits in README).
 // The AudioContext can only start after a user gesture, so call unlock() from input.
 
 let ac = null;
 let master = null;
 let muted = false;
 const VOLUME = 0.5;
+
+// Music tracks by name.
+const TRACKS = {
+  menu: 'assets/menu.mp3',
+  game: 'assets/game.mp3',
+};
+const MUSIC_VOLUME = 0.5;
+const FADE = 1.2; // seconds
+const playing = {};
+let wanted = null;
 
 try {
   muted = JSON.parse(localStorage.getItem('settings') || '{}').muted === true;
@@ -20,8 +30,58 @@ export function unlock() {
     master = ac.createGain();
     master.gain.value = muted ? 0 : VOLUME;
     master.connect(ac.destination);
+    Object.keys(TRACKS).forEach(track);
+    music(wanted);
   }
   if (ac.state === 'suspended') ac.resume();
+}
+
+// Each track plays through its own gain into master, so mute covers music too
+// (iOS ignores <audio>.volume, so fades have to happen in WebAudio).
+function track(name) {
+  if (!playing[name]) {
+    const el = new Audio(TRACKS[name]);
+    el.loop = true;
+    el.preload = 'auto';
+    const gain = ac.createGain();
+    gain.gain.value = 0;
+    ac.createMediaElementSource(el).connect(gain).connect(master);
+    playing[name] = { el, gain };
+  }
+  return playing[name];
+}
+
+function fadeTo(gain, value) {
+  const t = ac.currentTime;
+  gain.gain.cancelScheduledValues(t);
+  gain.gain.setValueAtTime(gain.gain.value, t);
+  gain.gain.linearRampToValueAtTime(value, t + FADE);
+}
+
+// Crossfade to a track by name; a name with no track (or null) fades to silence.
+export function music(name) {
+  wanted = TRACKS[name] ? name : null;
+  if (!ac) return; // unlock() starts it
+  for (const [n, tr] of Object.entries(playing)) {
+    if (n === wanted) continue;
+    fadeTo(tr.gain, 0);
+    setTimeout(() => n !== wanted && tr.el.pause(), FADE * 1000);
+  }
+  if (!wanted) return;
+  const tr = track(wanted);
+  if (tr.el.paused) {
+    tr.el.currentTime = 0;
+    tr.el.play().catch(() => {});
+  }
+  fadeTo(tr.gain, MUSIC_VOLUME);
+}
+
+// Betacade pauses the game: hold the music where it is.
+export function pauseMusic(paused) {
+  const tr = wanted && playing[wanted];
+  if (!tr) return;
+  if (paused) tr.el.pause();
+  else tr.el.play().catch(() => {});
 }
 
 export function isMuted() {
