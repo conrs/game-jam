@@ -16,7 +16,6 @@ const LIFT = 62;                        // warm-air lift at full heat, near the 
 const MAX_LOGS = 4;
 const FUEL_PER_LOG = 5;
 const MAX_FUEL = 12;
-const MAX_SCORES = 10;                  // runs kept on the leaderboard
 
 const LEAF_COLORS = ['#e0642c', '#f0a030', '#c8382c', '#f5c84a', '#a8452a'];
 const LEAF_FRAMES = [
@@ -49,6 +48,7 @@ const ui = {
   screens: document.querySelectorAll('.screen'),
   result: document.getElementById('result'),
   scores: document.getElementById('scores'),
+  you: document.getElementById('you'),
   mute: document.getElementById('mute'),
 };
 
@@ -58,7 +58,7 @@ const ui = {
 const SAVE_KEY = 'game-jam:save';
 
 const save = (() => {
-  const defaults = { bestTime: 0, runs: 0, scores: [] };
+  const defaults = { bestTime: 0, runs: 0 };
   try {
     let raw = localStorage.getItem(SAVE_KEY);
     // Older builds used a bare "save" key. Only carry it over on Betacade, where the
@@ -70,7 +70,8 @@ const save = (() => {
   }
 })();
 
-let latestRun = null; // highlights this session's latest run on the leaderboard
+let myBoard = null; // {best, rank, ...} from the last score sent to the global board
+let boardRequest = 0;
 
 function persist() {
   try {
@@ -336,18 +337,23 @@ function updateStorm(dt) {
 function endRun() {
   const best = s.t > save.bestTime;
   save.bestTime = Math.max(save.bestTime, s.t);
-  const entry = { time: s.t, rescues: s.rescues, at: Date.now() };
-  save.scores = [...save.scores, entry].sort((a, b) => b.time - a.time).slice(0, MAX_SCORES);
-  const rank = save.scores.indexOf(entry) + 1;
-  latestRun = entry.at;
   persist();
   track('run.end', { time: Math.round(s.t), rescues: s.rescues, best });
   s.phase = 'over';
-  ui.result.textContent =
-    `The last leaf touched the ground.\nWinter held off for\n\n${fmtTime(s.t)}\n\n` +
-    `${best ? 'NEW BEST!' : rank ? `#${rank} on the leaderboard` : `Best ${fmtTime(save.bestTime)}`}\n` +
-    `Leaves rescued: ${s.rescues}`;
+  const run = s;
+  const showResult = (line) => {
+    ui.result.textContent =
+      `The last leaf touched the ground.\nWinter held off for\n\n${fmtTime(run.t)}\n\n${line}\nLeaves rescued: ${run.rescues}`;
+  };
+  showResult(best ? 'NEW BEST!' : `Best ${fmtTime(save.bestTime)}`);
   showScreen('gameover');
+
+  // The global board keeps each player's best; the answer adds their rank (null when not sharing).
+  window.wt?.submitScore?.(Math.round(run.t * 10) / 10)?.then((r) => {
+    if (!r) return;
+    myBoard = r;
+    if (s === run) showResult(`${best ? 'NEW BEST! ' : ''}#${r.rank} worldwide`);
+  });
 }
 
 // --- Particles: sparks + snow -------------------------------------------------
@@ -518,25 +524,33 @@ function showScreen(name) {
   ui.overlay.querySelector(`[data-screen="${name}"] button`)?.focus({ preventScroll: true });
 }
 
-function renderScores() {
-  const rows = save.scores.map((r, i) => {
+function boardMessage(text) {
+  const li = document.createElement('li');
+  li.className = 'empty';
+  li.textContent = text;
+  return li;
+}
+
+// Betacade's global board: each player's best time, shown by alias (or name, if they opt in).
+async function renderScores() {
+  const req = ++boardRequest;
+  ui.scores.replaceChildren(boardMessage('Loading...'));
+  ui.you.textContent = save.bestTime
+    ? `Your best: ${fmtTime(save.bestTime)}${myBoard ? `  (#${myBoard.rank})` : ''}`
+    : '';
+  const top = (await window.wt?.scores?.({ limit: 10 })) ?? [];
+  if (req !== boardRequest) return; // reopened meanwhile
+  const rows = top.map((r) => {
     const li = document.createElement('li');
-    li.classList.toggle('new', r.at === latestRun);
-    const date = new Date(r.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    for (const text of [`#${i + 1}`, fmtTime(r.time), `${r.rescues} saved`, date]) {
+    li.classList.toggle('mine', Boolean(myBoard) && r.rank === myBoard.rank && r.score === myBoard.best);
+    for (const text of [`#${r.rank}`, r.name, fmtTime(r.score)]) {
       const span = document.createElement('span');
       span.textContent = text;
       li.append(span);
     }
     return li;
   });
-  if (!rows.length) {
-    const li = document.createElement('li');
-    li.className = 'empty';
-    li.textContent = 'No winters held off yet.';
-    rows.push(li);
-  }
-  ui.scores.replaceChildren(...rows);
+  ui.scores.replaceChildren(...(rows.length ? rows : [boardMessage('No winters held off yet.')]));
 }
 
 function menuAction(action) {

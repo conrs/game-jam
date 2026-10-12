@@ -1,5 +1,7 @@
 # The Last Leaf
 
+[![Play on Betacade](https://play.betacade.com/g/game-jam/badge.svg)](https://play.betacade.com/g/game-jam)
+
 An autumn pixel-art survival game, hosted on [Betacade](https://betacade.com).
 
 An old story says the first snow can't fall until every leaf has touched the ground. Leaves fall from the great tree in waves, and gusts blow them sideways. Tap a fire pit, or press 1–5, to burn a log there. The warm air rises and lifts leaves back up, even ones already on the ground. Logs come in slowly and fires burn out, so you keep scrambling. Score is how long you hold off winter.
@@ -32,7 +34,7 @@ It uses the same Betacade token as Hold Fast (`~/.config/betacade/token`). The g
 
 ## itch.io
 
-`betacade.js` (Betacade's SDK, 1.0.0) ships in every build, so copies hosted elsewhere still send play data to the same Betacade game. Each copy has to name its Betacade build in `data-build` on the script tag (the repo keeps `0`, which sends nothing). Both deploy paths make a stamped copy:
+`betacade.js` (Betacade's SDK, 1.1.0) ships in every build, so copies hosted elsewhere still send play data to the same Betacade game. Each copy has to name its Betacade build in `data-build` on the script tag (the repo keeps `0`, which sends nothing). Both deploy paths make a stamped copy:
 
 - `./deploy.sh` writes `dist/the-last-leaf-itch-build<N>.zip`.
 - The GitHub Actions run keeps it as the `the-last-leaf-itch-build<N>` artifact.
@@ -41,8 +43,9 @@ On itch.io: Kind of project → HTML, upload the zip, tick "This file will be pl
 
 ## Betacade hooks
 
-- Save: `localStorage["game-jam:save"]` = `{ bestTime, runs, scores }` (namespaced because itch.io shares one origin; older builds used `save`, migrated on Betacade only)
+- Save: `localStorage["game-jam:save"]` = `{ bestTime, runs }` (namespaced because itch.io shares one origin; older builds used `save`, migrated on Betacade only)
 - Events: `run.start`, `run.end` (`time`, `rescues`, `best`)
+- Leaderboard: `wt.submitScore(seconds)` at the end of each run (higher wins); `wt.scores({ limit: 10 })` fills the Leaderboard screen
 - Pause: `wt:pause` / `wt:resume`
 
 ## Tuning

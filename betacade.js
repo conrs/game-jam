@@ -1,4 +1,4 @@
-/*! betacade.js 1.0.0 | https://betacade.com/llms.txt | the same window.wt on Betacade and anywhere else */
+/*! betacade.js 1.1.0 | https://betacade.com/llms.txt | the same window.wt on Betacade and anywhere else */
 // The Betacade library. A game ships this file in its build (it never loads it from us) and calls
 // Betacade.init({game, build}) before its own code, or uses the tag form:
 //   <script src="betacade.js" data-game="<slug>" data-build="<number>"></script>
@@ -32,7 +32,7 @@
   } catch (e) {}
 })(typeof window !== "undefined" ? window : typeof self !== "undefined" ? self : this, function (W) {
   "use strict";
-  var VERSION = "1.0.0",
+  var VERSION = "1.1.0",
     API = "https://api.betacade.com",
     PRIVACY = "https://betacade.com/privacy.html",
     SLUG = /^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$/,
@@ -49,6 +49,8 @@
       track: noop, achieve: noop, ready: noop,
       onAchievement: unsub, onPause: unsub, onResume: unsub, onSnapshot: unsub, onReplay: unsub,
       achievements: function () { return typeof Promise === "function" ? Promise.resolve([]) : null; },
+      submitScore: function () { return typeof Promise === "function" ? Promise.resolve(null) : null; },
+      scores: function () { return typeof Promise === "function" ? Promise.resolve([]) : null; },
     };
     for (var k in d) if (has.call(d, k) && typeof o[k] !== "function") o[k] = d[k];
     if (typeof o.replaying !== "boolean") o.replaying = false;
@@ -85,9 +87,28 @@
     try { W.wt = o; } catch (e) {}
     wt = fill(o);
     if (!W.__wtInjected) {
+      try { board(opts || {}); } catch (e) {}
       try { telemetry(opts || {}); } catch (e) {}
     }
     return wt;
+  }
+
+  function apiOf(opts) {
+    return typeof opts.api === "string" && /^https?:\/\/[^\s\/?#]+\/*$/.test(opts.api) ? opts.api.replace(/\/+$/, "") : API;
+  }
+
+  // The game's top-score board is public: reading it sends no play data, so it works even when
+  // the player said Don't share.
+  function board(opts) {
+    var slug = typeof opts.game === "string" && SLUG.test(opts.game) ? opts.game : null;
+    if (!slug || typeof W.fetch !== "function" || typeof Promise !== "function") return;
+    var api = apiOf(opts);
+    wt.scores = function (o) {
+      var l = o && typeof o.limit === "number" && o.limit >= 1 ? Math.min(100, Math.floor(o.limit)) : 10;
+      return W.fetch(api + "/v1/play/games/" + slug + "/leaderboard?limit=" + l, { credentials: "omit" })
+        .then(function (r) { return r.status === 200 ? r.json() : null; })
+        .then(function (x) { return x && Array.isArray(x.items) ? x.items : []; }, function () { return []; });
+    };
   }
 
   function telemetry(opts) {
@@ -104,7 +125,7 @@
     }
     if (nav.globalPrivacyControl === true || nav.doNotTrack === "1" || W.doNotTrack === "1") return;
     if (typeof W.fetch !== "function") return;
-    var api = typeof opts.api === "string" && /^https?:\/\/[^\s\/?#]+\/*$/.test(opts.api) ? opts.api.replace(/\/+$/, "") : API;
+    var api = apiOf(opts);
     var via = typeof opts.via === "string" && /^[a-z2-7]{8}$/.test(opts.via) ? opts.via : null;
     var pats = Array.isArray(opts.saves) ? opts.saves.filter(function (p) { return typeof p === "string" && p !== "" && p !== "*"; }) : [];
 
@@ -290,12 +311,33 @@
         S = s; tries = 0;
         HB = setInterval(beat, Math.max(10, Number(s.heartbeatSeconds) || 30) * 1000);
         pend.splice(0, pend.length).forEach(sendError);
+        SQ.splice(0, SQ.length).forEach(function (f) { f(); });
         SNAP = true;
         sched(2000);
       })["catch"](function () {
         opening = false;
         if (tries < 3) setTimeout(open, 15000 * Math.pow(2, tries++));
       });
+    }
+    // wt.submitScore: the player's best is kept on the board. Sent once the session is open (up to
+    // 15 s); null when it can't be.
+    var SQ = [];
+    if (typeof Promise === "function") {
+      wt.submitScore = function (score) {
+        return new Promise(function (done) {
+          if (typeof score !== "number" || !isFinite(score) || stopped) { done(null); return; }
+          function go() {
+            if (!S) { done(null); return; }
+            call("sessions/" + S.sessionId + "/scores", { sessionSecret: S.sessionSecret, score: score })
+              .then(function (r) { return r.status === 200 ? r.json() : null; })
+              .then(function (x) { done(x && typeof x === "object" ? x : null); }, function () { done(null); });
+          }
+          if (S) { go(); return; }
+          if (SQ.length >= 5) { done(null); return; }
+          SQ.push(go);
+          setTimeout(function () { var i = SQ.indexOf(go); if (i >= 0) { SQ.splice(i, 1); done(null); } }, 15000);
+        });
+      };
     }
     function beat() {
       if (!S || stopped || (W.document && W.document.visibilityState !== "visible")) return;
