@@ -30,9 +30,18 @@ Every push to `main` deploys automatically via `.github/workflows/betacade.yml` 
 
 It uses the same Betacade token as Hold Fast (`~/.config/betacade/token`). The game id is kept in `.betacade-game`.
 
+## itch.io
+
+`betacade.js` (Betacade's SDK, 1.0.0) ships in every build, so copies hosted elsewhere still send play data to the same Betacade game. Each copy has to name its Betacade build in `data-build` on the script tag (the repo keeps `0`, which sends nothing). Both deploy paths make a stamped copy:
+
+- `./deploy.sh` writes `dist/game-jam-itch-build<N>.zip`.
+- The GitHub Actions run keeps it as the `game-jam-itch-build<N>` artifact.
+
+On itch.io: Kind of project → HTML, upload the zip, tick "This file will be played in the browser".
+
 ## Betacade hooks
 
-- Save: `localStorage["save"]` = `{ bestTime, runs }`
+- Save: `localStorage["game-jam:save"]` = `{ bestTime, runs, scores }` (namespaced because itch.io shares one origin; older builds used `save`, migrated on Betacade only)
 - Events: `run.start`, `run.end` (`time`, `rescues`, `best`)
 - Pause: `wt:pause` / `wt:resume`
 

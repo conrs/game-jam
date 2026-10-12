@@ -1,9 +1,10 @@
-// Sound effects synthesized with WebAudio; music streamed from assets/ (credits in README).
+// Sound effects synthesized with WebAudio; music looped from assets/ (credits in README).
 // The AudioContext can only start after a user gesture, so call unlock() from input.
 
 let ac = null;
 let master = null;
 let muted = false;
+const SETTINGS_KEY = 'game-jam:settings'; // namespaced: itch.io shares one origin across games
 const VOLUME = 0.5;
 
 // Music tracks by name.
@@ -16,8 +17,13 @@ const FADE = 1.2; // seconds
 const playing = {};
 let wanted = null;
 
+// Download now; decoding needs the AudioContext, which waits for a gesture.
+const bytes = Object.fromEntries(
+  Object.entries(TRACKS).map(([name, url]) => [name, fetch(url).then((r) => r.arrayBuffer())]),
+);
+
 try {
-  muted = JSON.parse(localStorage.getItem('settings') || '{}').muted === true;
+  muted = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}').muted === true;
 } catch {
   // Storage blocked: default to sound on.
 }
@@ -36,19 +42,35 @@ export function unlock() {
   if (ac.state === 'suspended') ac.resume();
 }
 
-// Each track plays through its own gain into master, so mute covers music too
-// (iOS ignores <audio>.volume, so fades have to happen in WebAudio).
+// Tracks are decoded into memory and looped by WebAudio: <audio loop> leaves a gap at
+// the loop point in most browsers. Each plays through its own gain into master, so
+// mute covers music too.
 function track(name) {
   if (!playing[name]) {
-    const el = new Audio(TRACKS[name]);
-    el.loop = true;
-    el.preload = 'auto';
     const gain = ac.createGain();
     gain.gain.value = 0;
-    ac.createMediaElementSource(el).connect(gain).connect(master);
-    playing[name] = { el, gain };
+    gain.connect(master);
+    const buffer = bytes[name].then((b) => ac.decodeAudioData(b));
+    buffer.catch(() => {}); // a missing track just stays silent
+    playing[name] = { gain, buffer, source: null };
   }
   return playing[name];
+}
+
+async function startLoop(name) {
+  const tr = playing[name];
+  const buffer = await tr.buffer;
+  if (wanted !== name || tr.source) return; // moved on, or already playing
+  tr.source = ac.createBufferSource();
+  tr.source.buffer = buffer;
+  tr.source.loop = true;
+  tr.source.connect(tr.gain);
+  tr.source.start();
+}
+
+function stopLoop(tr) {
+  tr.source?.stop();
+  tr.source = null;
 }
 
 function fadeTo(gain, value) {
@@ -65,23 +87,19 @@ export function music(name) {
   for (const [n, tr] of Object.entries(playing)) {
     if (n === wanted) continue;
     fadeTo(tr.gain, 0);
-    setTimeout(() => n !== wanted && tr.el.pause(), FADE * 1000);
+    setTimeout(() => n !== wanted && stopLoop(tr), FADE * 1000);
   }
   if (!wanted) return;
   const tr = track(wanted);
-  if (tr.el.paused) {
-    tr.el.currentTime = 0;
-    tr.el.play().catch(() => {});
-  }
+  startLoop(wanted).catch(() => {});
   fadeTo(tr.gain, MUSIC_VOLUME);
 }
 
-// Betacade pauses the game: hold the music where it is.
+// Betacade pauses the game: freeze all audio where it is.
 export function pauseMusic(paused) {
-  const tr = wanted && playing[wanted];
-  if (!tr) return;
-  if (paused) tr.el.pause();
-  else tr.el.play().catch(() => {});
+  if (!ac) return;
+  if (paused) ac.suspend();
+  else ac.resume();
 }
 
 export function isMuted() {
@@ -92,7 +110,7 @@ export function toggleMute() {
   muted = !muted;
   if (master) master.gain.value = muted ? 0 : VOLUME;
   try {
-    localStorage.setItem('settings', JSON.stringify({ muted }));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ muted }));
   } catch {
     // Not persisted; fine.
   }

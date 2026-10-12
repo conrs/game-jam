@@ -14,7 +14,7 @@ GAME_NAME="Game Jam"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 TOKEN_FILE="$HOME/.config/betacade/token"
 GAME_FILE="$ROOT/.betacade-game"
-BUILD_FILES=(index.html style.css src assets)
+BUILD_FILES=(index.html style.css betacade.js src assets)
 
 # --- helpers -----------------------------------------------------------------
 
@@ -159,3 +159,14 @@ WARNINGS="$(json_get warnings <<<"$RESP")"
 [[ -n "$WARNINGS" && "$WARNINGS" != "[]" ]] && echo "warnings: $WARNINGS"
 echo "Play (latest): $(json_get playUrl <<<"$RESP")"
 echo "This build:    $(json_get buildUrl <<<"$RESP")"
+
+# --- 5. itch.io copy -----------------------------------------------------------
+# The same files, with betacade.js told which build they are so play data from
+# itch.io lands on this build. Upload the zip to itch.io as an HTML game.
+
+mkdir -p "$ROOT/dist"
+ITCH_ZIP="$ROOT/dist/game-jam-itch-build$NUMBER.zip"
+sed -i '' "s/data-build=\"[0-9]*\"/data-build=\"$NUMBER\"/" "$WORK/build/index.html"
+rm -f "$ITCH_ZIP"
+(cd "$WORK/build" && zip -qr "$ITCH_ZIP" .)
+echo "itch.io zip:   $ITCH_ZIP"

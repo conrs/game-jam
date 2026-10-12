@@ -45,11 +45,19 @@ const ui = {
 
 // --- Save (Betacade reads localStorage JSON) -----------------------------------
 
+// Namespaced because itch.io serves every game from one origin.
+const SAVE_KEY = 'game-jam:save';
+
 const save = (() => {
+  const defaults = { bestTime: 0, runs: 0, scores: [] };
   try {
-    return { bestTime: 0, runs: 0, scores: [], ...JSON.parse(localStorage.getItem('save') || '{}') };
+    let raw = localStorage.getItem(SAVE_KEY);
+    // Older builds used a bare "save" key. Only carry it over on Betacade, where the
+    // game has its own storage; elsewhere it could be another game's save.
+    if (raw === null && window.wt?.host === 'betacade') raw = localStorage.getItem('save');
+    return { ...defaults, ...JSON.parse(raw || '{}') };
   } catch {
-    return { bestTime: 0, runs: 0, scores: [] };
+    return defaults;
   }
 })();
 
@@ -57,7 +65,7 @@ let latestRun = null; // highlights this session's latest run on the leaderboard
 
 function persist() {
   try {
-    localStorage.setItem('save', JSON.stringify(save));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(save));
   } catch {
     // Storage blocked: the game still plays.
   }
