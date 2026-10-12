@@ -1,11 +1,32 @@
 * { box-sizing: border-box; }
 
+/* Argent Pixel CF: drawn on a 100-unit grid (10 font pixels to the em), capitals 7 pixels tall. */
+@font-face {
+  font-family: 'Argent Pixel CF';
+  src: url('assets/fonts/ArgentPixelCF-Regular.otf') format('opentype');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Argent Pixel CF';
+  src: url('assets/fonts/ArgentPixelCF-Italic.otf') format('opentype');
+  font-style: italic;
+  font-display: block;
+}
+
+/* Variable font: one file covers weights 400-700, so bold is real, not faked. */
+@font-face {
+  font-family: 'Pixelify Sans';
+  src: url('assets/fonts/PixelifySans-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 700;
+  font-display: block;
+}
+
 html, body {
   margin: 0;
   height: 100%;
   background: #1a1020;
   color: #fff1d6;
-  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-family: 'Pixelify Sans', ui-monospace, Menlo, Consolas, monospace;
   overflow: hidden;
   touch-action: manipulation;
   user-select: none;
@@ -110,38 +131,36 @@ body {
 
 #overlay a { color: #f5c84a; }
 
-/* Title screen */
+/* Title screen: THE above LAST LEAF. Argent Pixel CF has 10 font pixels to the em,
+   so 20 game px draws each font pixel as 2x2 game pixels. The negative right
+   margins cancel the letter-spacing after each word's last letter, so words center. */
 .logo {
   margin: 0 0 calc(var(--px, 1px) * -2);
   display: flex;
-  flex-direction: column;
-  font-size: calc(var(--px, 1px) * 22);
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 0.4em;
+  font-family: 'Argent Pixel CF', 'Pixelify Sans', ui-monospace, Menlo, Consolas, monospace;
+  font-weight: normal;
+  font-size: calc(var(--px, 1px) * 20);
   line-height: 0.95;
   letter-spacing: 0.1em;
 }
-.logo span:nth-child(1) { font-size: 0.4em; letter-spacing: 0.4em; color: #fff1d6; margin-bottom: calc(var(--px, 1px) * 2); }
-.logo span:nth-child(2) { color: #f5a030; text-shadow: calc(var(--px, 1px) * 2) calc(var(--px, 1px) * 2) 0 #8a2c2a; }
-.logo span:nth-child(3) { color: #e0642c; text-shadow: calc(var(--px, 1px) * 2) calc(var(--px, 1px) * 2) 0 #3a1830; }
+.logo span { margin-right: -0.1em; }
+.logo span:nth-child(1) { flex-basis: 100%; font-size: 0.5em; letter-spacing: 0.4em; margin-right: -0.4em; color: #fff1d6; margin-bottom: calc(var(--px, 1px) * 2); }
+.logo span:nth-child(n + 2) { color: #f5a030; text-shadow: calc(var(--px, 1px) * 2) calc(var(--px, 1px) * 2) 0 #8a2c2a; }
 
 #overlay .tagline { color: #bfe4ff; font-size: calc(var(--px, 1px) * 6); }
 #overlay .hint { font-size: calc(var(--px, 1px) * 5); opacity: 0.75; }
 
-/* Stacked menu buttons: the selected one gets a marker. */
+/* Stacked menu buttons: the selected one shows the hover art (see the button rules below). */
 .menu {
   display: flex;
   flex-direction: column;
   gap: calc(var(--px, 1px) * 4);
   width: 80%;
 }
-.menu button { width: 100%; position: relative; }
-.menu button:focus-visible,
-.menu button:hover { background: #fff1d6; outline: none; }
-.menu button:focus-visible::before,
-.menu button:hover::before {
-  content: '▶';
-  position: absolute;
-  left: calc(var(--px, 1px) * 4);
-}
+.menu button { width: 100%; }
 
 /* Leaderboard and credits panels */
 .panel {
@@ -193,18 +212,48 @@ button {
   cursor: pointer;
 }
 
+/* Pixel-art buttons: art/ui/btn-*.png is a 15-row face (rows 0-14) over a 2-row
+   shadow, stretched to fit between its 1px ends. Labels are Argent Pixel CF at
+   8 game px: capitals 0.7em = 5.6 rows tall, baseline 1em below the top of a
+   1.2em line. Chrome rounds those metrics a little, so the padding is set from
+   measuring the result: 4.7 face rows above the capitals and 4.7 below. */
 #overlay button {
+  height: calc(var(--px, 1px) * 17);
+  padding: calc(var(--px, 1px) * 1.5) calc(var(--px, 1px) * 10) calc(var(--px, 1px) * 1.9);
+  font-family: 'Argent Pixel CF', 'Pixelify Sans', ui-monospace, Menlo, Consolas, monospace;
   font-size: calc(var(--px, 1px) * 8);
-  padding: calc(var(--px, 1px) * 3) calc(var(--px, 1px) * 10);
+  line-height: 1.2;
+  color: #000;
+  background: none;
+  box-shadow: none;
+  border-style: solid;
+  border-width: calc(var(--px, 1px) * 1) calc(var(--px, 1px) * 1) calc(var(--px, 1px) * 3);
+  border-image: url('art/ui/btn-normal.png') 1 1 3 fill;
+  image-rendering: pixelated;
 }
+#overlay button:focus-visible { border-image-source: url('art/ui/btn-hover.png'); outline: none; }
+@media (hover: hover) {
+  #overlay button:hover { border-image-source: url('art/ui/btn-hover.png'); }
+}
+#overlay button:active { border-image-source: url('art/ui/btn-pressed.png'); }
 
+/* Sound toggle: aria-pressed="true" means muted. */
 #mute {
   position: absolute;
-  right: 2%;
-  bottom: 1%;
-  font-size: calc(var(--px, 1px) * 6);
-  width: calc(var(--px, 1px) * 12);
-  height: calc(var(--px, 1px) * 10);
+  right: calc(var(--px, 1px) * 3);
+  bottom: calc(var(--px, 1px) * 2);
+  width: calc(var(--px, 1px) * 13);
+  height: calc(var(--px, 1px) * 13);
   padding: 0;
-  opacity: 0.7;
+  border: 0;
+  box-shadow: none;
+  background: url('art/ui/btn-sound-on-normal.png') 0 0 / 100% 100% no-repeat;
+  image-rendering: pixelated;
 }
+#mute[aria-pressed="true"] { background-image: url('art/ui/btn-sound-off-normal.png'); }
+@media (hover: hover) {
+  #mute:hover { background-image: url('art/ui/btn-sound-on-hover.png'); }
+  #mute[aria-pressed="true"]:hover { background-image: url('art/ui/btn-sound-off-hover.png'); }
+}
+#mute:active { background-image: url('art/ui/btn-sound-on-pressed.png'); }
+#mute[aria-pressed="true"]:active { background-image: url('art/ui/btn-sound-off-pressed.png'); }

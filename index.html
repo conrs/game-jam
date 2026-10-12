@@ -7,6 +7,14 @@
   <!-- Betacade SDK: same window.wt on any host. data-build is stamped per copy by deploy.sh (0 = send nothing). -->
   <script src="betacade.js" data-game="game-jam" data-build="0" data-saves="game-jam:save"></script>
   <link rel="stylesheet" href="style.css">
+  <!-- Button states that CSS only asks for on hover/press; fetch them up front so they don't flash in. -->
+  <link rel="preload" as="image" href="art/ui/btn-hover.png">
+  <link rel="preload" as="image" href="art/ui/btn-pressed.png">
+  <link rel="preload" as="image" href="art/ui/btn-sound-off-normal.png">
+  <link rel="preload" as="image" href="art/ui/btn-sound-on-hover.png">
+  <link rel="preload" as="image" href="art/ui/btn-sound-off-hover.png">
+  <link rel="preload" as="image" href="art/ui/btn-sound-on-pressed.png">
+  <link rel="preload" as="image" href="art/ui/btn-sound-off-pressed.png">
 </head>
 <body>
   <div id="stage">
@@ -62,7 +70,7 @@
       </section>
     </div>
 
-    <button id="mute" type="button" aria-label="Toggle sound">&#9834;</button>
+    <button id="mute" type="button" aria-label="Mute" aria-pressed="false"></button>
   </div>
 
   <script type="module" src="src/main.js"></script>

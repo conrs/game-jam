@@ -608,12 +608,16 @@ window.addEventListener('keydown', (e) => {
 });
 
 function updateMute(muted) {
-  ui.mute.textContent = muted ? '×' : '♪';
+  ui.mute.setAttribute('aria-pressed', String(muted));
 }
 
 canvas.addEventListener('pointerdown', onPointer);
 // Any tap on the title screen starts the menu music (browsers block sound until a gesture).
 ui.overlay.addEventListener('pointerdown', () => sfx.unlock());
+// Pointing at a button selects it, so the mouse and the arrow keys share one highlight.
+ui.overlay.addEventListener('pointerover', (e) => {
+  if (e.pointerType === 'mouse') e.target.closest('button')?.focus({ preventScroll: true });
+});
 ui.overlay.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
