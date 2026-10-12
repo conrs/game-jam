@@ -127,7 +127,19 @@ echo "Packaged ${BUILD_FILES[*]} ($SIZE bytes)"
 
 # --- 4. start build, upload, finalize ----------------------------------------
 
-api POST "/v1/games/$GAME_ID/builds" "{\"mode\":\"archive\",\"sizeBytes\":$SIZE}" \
+# Tag the build with its commit, but only when the working tree matches that commit.
+SOURCE=""
+if git -C "$ROOT" rev-parse --verify -q HEAD >/dev/null; then
+  if [[ -z "$(git -C "$ROOT" status --porcelain)" ]]; then
+    COMMIT="$(git -C "$ROOT" rev-parse HEAD)"
+    BRANCH="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
+    SOURCE=",\"source\":{\"commit\":\"$COMMIT\",\"branch\":\"$BRANCH\"}"
+  else
+    echo "note: uncommitted changes, so this build isn't tagged with a commit"
+  fi
+fi
+
+api POST "/v1/games/$GAME_ID/builds" "{\"mode\":\"archive\",\"sizeBytes\":$SIZE$SOURCE}" \
   -H "Idempotency-Key: $(uuidgen)"
 [[ "$STATUS" == 401 ]] && { rm -f "$TOKEN_FILE"; fail "token rejected; run again to sign in"; }
 [[ "$STATUS" =~ ^2 ]] || fail "could not start build"

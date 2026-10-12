@@ -15,6 +15,8 @@ python3 -m http.server 8000
 
 ## Deploy
 
+Every push to `main` deploys automatically via `.github/workflows/betacade.yml` (uses the `BETACADE_TOKEN` repo secret). To deploy by hand:
+
 ```sh
 ./deploy.sh
 ```

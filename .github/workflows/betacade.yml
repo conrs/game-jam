@@ -1,0 +1,29 @@
+# Deploy each push to main to Betacade (same files as deploy.sh).
+name: Deploy to Betacade
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        env:
+          BETACADE_TOKEN: ${{ secrets.BETACADE_TOKEN }}
+          API: https://api.betacade.com
+        run: |
+          set -euo pipefail
+          GAME_ID="$(cat .betacade-game)"
+          mkdir /tmp/build
+          cp -R index.html style.css src /tmp/build/
+          tar -czf /tmp/build.tar.gz -C /tmp/build .
+          size=$(stat -c %s /tmp/build.tar.gz)
+          start=$(curl -sS --fail-with-body -X POST "$API/v1/games/$GAME_ID/builds" \
+            -H "Authorization: Bearer $BETACADE_TOKEN" -H "Content-Type: application/json" \
+            -H "Idempotency-Key: $GITHUB_SHA-$GITHUB_RUN_ATTEMPT" \
+            -d "{\"mode\": \"archive\", \"sizeBytes\": $size, \"source\": {\"commit\": \"$GITHUB_SHA\", \"branch\": \"$GITHUB_REF_NAME\"}}")
+          number=$(echo "$start" | jq -r .number)
+          curl -sS --fail-with-body -T /tmp/build.tar.gz "$(echo "$start" | jq -r .uploadUrl)"
+          curl -sS --fail-with-body -X POST "$API/v1/games/$GAME_ID/builds/$number/finalize" \
+            -H "Authorization: Bearer $BETACADE_TOKEN" | jq '{number, status, warnings, playUrl, buildUrl}'
