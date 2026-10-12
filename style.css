@@ -235,6 +235,7 @@ body {
   letter-spacing: 0.1em;
 }
 #overlay #player-status { margin-top: calc(var(--px, 1px) * -4); line-height: 1.4; }
+#overlay #sharing-note { margin-top: calc(var(--px, 1px) * -2); line-height: 1.4; }
 
 button {
   font: inherit;

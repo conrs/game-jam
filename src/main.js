@@ -53,6 +53,7 @@ const ui = {
   levels: document.querySelectorAll('input[data-level]'),
   playerStatus: document.getElementById('player-status'),
   playerBtn: document.getElementById('player-btn'),
+  sharingNote: document.getElementById('sharing-note'),
   mute: document.getElementById('mute'),
   fullscreen: document.getElementById('fullscreen'),
   pauseBtn: document.getElementById('pause'),
@@ -706,6 +707,11 @@ document.addEventListener('fullscreenchange', () => {
 function renderSettings() {
   for (const input of ui.levels) input.value = String(Math.round(sfx.getLevel(input.dataset.level) * 10));
   renderPlayer(window.wt?.player);
+  // The game can't read or change the sharing choice yet (requested from Betacade), so
+  // say where it lives instead of showing a switch.
+  ui.sharingNote.textContent = window.wt?.host === 'betacade'
+    ? "Play data is shared with the developers through Betacade. Change it in Betacade's menu."
+    : "Play data is shared with the developers through Betacade, if you chose OK on its note.";
 }
 
 for (const input of ui.levels) {
