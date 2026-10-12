@@ -7,6 +7,14 @@
   <!-- Betacade SDK: same window.wt on any host. data-build is stamped per copy by deploy.sh (0 = send nothing). -->
   <script src="betacade.js" data-game="game-jam" data-build="0" data-saves="game-jam:save"></script>
   <link rel="stylesheet" href="style.css">
+  <!-- Button states that CSS only asks for on hover/press; fetch them up front so they don't flash in. -->
+  <link rel="preload" as="image" href="art/ui/btn-hover.png">
+  <link rel="preload" as="image" href="art/ui/btn-pressed.png">
+  <link rel="preload" as="image" href="art/ui/btn-sound-off-normal.png">
+  <link rel="preload" as="image" href="art/ui/btn-sound-on-hover.png">
+  <link rel="preload" as="image" href="art/ui/btn-sound-off-hover.png">
+  <link rel="preload" as="image" href="art/ui/btn-sound-on-pressed.png">
+  <link rel="preload" as="image" href="art/ui/btn-sound-off-pressed.png">
 </head>
 <body>
   <div id="stage">
@@ -48,6 +56,8 @@
           <dd>Claude Opus 5.5 by Anthropic</dd>
           <dt>Music</dt>
           <dd>"Home at Last" and "Around the Fireplace" by Matthew Z. (Matyze), <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC-BY-SA 3.0</a>, via <a href="https://opengameart.org/users/matyze" target="_blank" rel="noopener">OpenGameArt</a></dd>
+          <dt>Fonts</dt>
+          <dd>Argent Pixel CF by Connary Fagen (<a href="https://connary.com" target="_blank" rel="noopener">connary.com</a>), free personal license; Pixelify Sans by Stefie Justprince, <a href="https://openfontlicense.org" target="_blank" rel="noopener">SIL OFL 1.1</a></dd>
           <dt>Code</dt>
           <dd><a href="https://github.com/conrs/the-last-leaf" target="_blank" rel="noopener">Code and art: MIT license, on GitHub</a></dd>
         </dl>
@@ -65,8 +75,8 @@
       </section>
     </div>
 
-    <button id="mute" type="button" aria-label="Toggle sound">&#9834;</button>
-    <button id="fullscreen" type="button" aria-label="Toggle fullscreen" hidden></button>
+    <button id="mute" type="button" aria-label="Mute" aria-pressed="false"></button>
+    <button id="fullscreen" type="button" aria-label="Fullscreen" aria-pressed="false" hidden></button>
   </div>
 
   <script type="module" src="src/main.js"></script>

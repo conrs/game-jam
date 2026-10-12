@@ -10,10 +10,12 @@ The game gets harder over time: leaves fall faster and in bigger flurries, gusts
 
 ## Credits
 
-By Matt Connors and Charles Haitkin, built with Claude Opus 5.5 by Anthropic. Code and art (`art/`) are MIT (see `LICENSE`). Music in `assets/` is not covered by the MIT license:
+By Matt Connors and Charles Haitkin, built with Claude Opus 5.5 by Anthropic. Code and art (`art/`) are MIT (see `LICENSE`). Music and fonts in `assets/` are not covered by the MIT license:
 
 - `assets/menu.mp3`: "Home at Last" by Matthew Z. (Matyze), [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), from [OpenGameArt](https://opengameart.org/content/home-at-last).
 - `assets/game.mp3`: "Around the Fireplace" by Matthew Z. (Matyze), [CC-BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), from [OpenGameArt](https://opengameart.org/content/around-the-fireplace).
+- `assets/fonts/ArgentPixelCF-*.otf`: Argent Pixel CF by Connary Fagen ([connary.com](https://connary.com)), © 2018, all rights reserved; used under the foundry's free personal license. Not for reuse; get your own license from the foundry.
+- `assets/fonts/PixelifySans-VariableFont_wght.ttf`: Pixelify Sans by Stefie Justprince, © 2021 The Pixelify Sans Project Authors, [SIL Open Font License 1.1](https://openfontlicense.org) (see `assets/fonts/PixelifySans-OFL.txt`).
 
 ## Run locally
 
