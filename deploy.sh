@@ -14,7 +14,7 @@ GAME_NAME="Game Jam"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 TOKEN_FILE="$HOME/.config/betacade/token"
 GAME_FILE="$ROOT/.betacade-game"
-BUILD_FILES=(index.html style.css betacade.js src assets)
+BUILD_FILES=(index.html style.css betacade.js src assets art)
 
 # --- helpers -----------------------------------------------------------------
 

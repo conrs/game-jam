@@ -25,10 +25,19 @@ const LEAF_FRAMES = [
   ['.##', '###', '##.'],
   ['###', '.#.', '...'],
 ];
-const SKY = ['#2a1838', '#3c1f45', '#5a274e', '#7a3150', '#9c4050', '#bd5548', '#d8703e', '#e8903c'];
-
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+
+// Sky, sun and hills: a W x GROUND image, with the W x (H - GROUND) ground strip below.
+const backdrop = new Image();
+backdrop.src = 'art/background.png';
+const groundArt = new Image();
+groundArt.src = 'art/ground.png';
+// Storm clouds: a W-wide strip that tiles sideways, fringe along the bottom.
+const cloudArt = new Image();
+cloudArt.src = 'art/clouds.png';
+const CLOUD_DRIFT = 2; // px/s, plus a share of the wind
+let cloudX = 0;
 const stage = document.getElementById('stage');
 const ui = {
   time: document.getElementById('hud-time'),
@@ -92,26 +101,22 @@ function rect(c, color, x, y, w, h) {
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const fmtTime = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
-// --- Tree (generated once, drawn to its own canvas) ----------------------------
+// --- Tree ------------------------------------------------------------------------
 
-const treeCanvas = document.createElement('canvas');
-treeCanvas.width = W;
-treeCanvas.height = H;
+// A full-size W x H layer, transparent around the tree.
+const treeArt = new Image();
+treeArt.src = 'art/tree.png';
+
+// Branch tips, where leaves hang. The tree art was drawn over this branch
+// layout, so its tips line up with the art's twigs; redrawing the tree in a
+// different shape means replacing this with the new tip positions.
 const tips = [];
 
-function buildTree() {
+function findTips() {
   const rand = mulberry32(1031);
-  const tctx = treeCanvas.getContext('2d');
-  function branch(x, y, ang, len, width, depth) {
+  function branch(x, y, ang, len, depth) {
     const x2 = x + Math.cos(ang) * len;
     const y2 = y + Math.sin(ang) * len;
-    const steps = Math.ceil(len);
-    for (let i = 0; i <= steps; i++) {
-      const px = x + ((x2 - x) * i) / steps;
-      const py = y + ((y2 - y) * i) / steps;
-      rect(tctx, '#3a2420', px - width / 2, py, width, 1);
-      if (width > 2) rect(tctx, '#5a382c', px - width / 2 + 1, py, 1, 1);
-    }
     if (depth === 0) {
       tips.push({ x: x2, y: y2 });
       return;
@@ -121,10 +126,10 @@ function buildTree() {
       const spread = (i - (n - 1) / 2) * 0.55 + (rand() - 0.5) * 0.5;
       // Pull branches back toward upward so the crown stays on screen.
       const a = ang + spread + (-Math.PI / 2 - ang) * 0.15;
-      branch(x2, y2, a, len * (0.66 + rand() * 0.14), Math.max(1, width - 1), depth - 1);
+      branch(x2, y2, a, len * (0.66 + rand() * 0.14), depth - 1);
     }
   }
-  branch(80, GROUND, -Math.PI / 2, 44, 6, 5);
+  branch(80, GROUND, -Math.PI / 2, 44, 5);
 }
 
 // --- State ---------------------------------------------------------------------
@@ -271,6 +276,7 @@ function updateLeaves(dt) {
 
 function update(dt) {
   updateSparks(dt);
+  cloudX = (cloudX + (CLOUD_DRIFT + s.wind * 0.3) * dt) % W;
   if (s.phase === 'storm') return updateStorm(dt);
   if (s.phase !== 'play') return;
   s.t += dt;
@@ -383,29 +389,21 @@ function stormHeight() {
   return 6 + 46 * (counts().ground / LEAF_COUNT);
 }
 
-function drawBackdrop(t) {
-  const band = Math.ceil(GROUND / SKY.length);
-  SKY.forEach((c, i) => rect(ctx, c, 0, i * band, W, band));
-  // Low sun and distant hills.
-  for (let dy = -12; dy < 0; dy++) {
-    const half = Math.floor(Math.sqrt(144 - dy * dy));
-    rect(ctx, '#ffd08a', 120 - half, 186 + dy, half * 2, 1);
-  }
-  for (let x = 0; x < W; x += 2) {
-    const h = 14 + Math.round(Math.sin(x * 0.05) * 6 + Math.sin(x * 0.13 + 1) * 3);
-    rect(ctx, '#4a2a40', x, GROUND - h, 2, h);
-  }
-  rect(ctx, '#3a2418', 0, GROUND, W, H - GROUND);
-  rect(ctx, '#5a3a22', 0, GROUND, W, 2);
-  for (let x = 3; x < W; x += 7) rect(ctx, '#4a5a2a', x, GROUND - 1, 1, 2);
+function drawBackdrop() {
+  // Until the images load, flat fills keep the previous frame from smearing.
+  if (backdrop.complete && backdrop.naturalWidth) ctx.drawImage(backdrop, 0, 0);
+  else rect(ctx, '#271936', 0, 0, W, GROUND);
+  if (groundArt.complete && groundArt.naturalWidth) ctx.drawImage(groundArt, 0, GROUND);
+  else rect(ctx, '#210e0e', 0, GROUND, W, H - GROUND);
 
   // Storm clouds creep down as winter gets closer.
+  // The art's fringe spans its bottom ~7 rows, so center that on the storm height.
   const sh = stormHeight();
-  for (let x = 0; x < W; x += 4) {
-    const h = sh + Math.round(Math.sin(x * 0.2 + t * 0.6) * 3);
-    rect(ctx, '#6a6478', x, 0, 4, h);
-    rect(ctx, '#8a8498', x, h - 3, 4, 2);
-  }
+  if (!cloudArt.complete || !cloudArt.naturalWidth) return rect(ctx, '#4d5c76', 0, 0, W, sh);
+  const x = Math.round(((cloudX % W) + W) % W);
+  const y = Math.round(sh) - cloudArt.height + 4;
+  ctx.drawImage(cloudArt, x - W, y);
+  ctx.drawImage(cloudArt, x, y);
 }
 
 function drawFire(f, i, t) {
@@ -464,8 +462,8 @@ function drawLeaf(l, t) {
 
 function draw(t) {
   ctx.imageSmoothingEnabled = false;
-  drawBackdrop(t);
-  ctx.drawImage(treeCanvas, 0, 0);
+  drawBackdrop();
+  if (treeArt.complete && treeArt.naturalWidth) ctx.drawImage(treeArt, 0, 0);
   for (const l of s.leaves) if (l.state !== 'air') drawLeaf(l, t);
   s.fires.forEach((f, i) => drawFire(f, i, t));
   for (const l of s.leaves) if (l.state === 'air') drawLeaf(l, t);
@@ -634,7 +632,7 @@ window.addEventListener('wt:resume', () => { paused = false; last = null; sfx.pa
 
 window.addEventListener('resize', fitStage);
 fitStage();
-buildTree();
+findTips();
 updateMute(sfx.isMuted());
 s = makeState('title');
 sfx.music('menu');
