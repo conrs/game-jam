@@ -184,7 +184,6 @@ function startRun() {
   s = makeState('play');
   save.runs++;
   track('run.start', { run: save.runs });
-  sfx.start();
   sfx.music('game');
   showScreen(null);
 }

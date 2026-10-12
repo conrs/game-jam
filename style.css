@@ -318,12 +318,13 @@ button {
 }
 #fullscreen:active, #pause:active { border-image-source: url('art/ui/btn-pressed.png'); }
 
-/* Pause icon: two bars, drawn like the fullscreen frame. */
+/* Pause icon: two 2px bars around a 1px gap (pseudo-elements are content-box, so the
+   width is just the gap). */
 #pause::before {
   content: '';
   display: block;
   margin: auto;
-  width: calc(var(--px, 1px) * 5);
+  width: calc(var(--px, 1px) * 1);
   height: calc(var(--px, 1px) * 5);
   border-left: calc(var(--px, 1px) * 2) solid #000;
   border-right: calc(var(--px, 1px) * 2) solid #000;

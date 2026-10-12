@@ -199,7 +199,6 @@ export const noLogs = () => tone(140, 0.15, { type: 'square', vol: 0.06 });
 export const rescue = () => tone(880, 0.12, { to: 1320, vol: 0.05 });
 export const land = () => noise(0.06, { vol: 0.05, freq: 1500 });
 export const log = () => melody([523, 784], 0.05, { vol: 0.04 });
-export const start = () => melody([392, 494, 587, 784], 0.1, { vol: 0.08 });
 
 export function gust() {
   noise(1.8, { vol: 0.18, freq: 500, type: 'bandpass', attack: 0.6 });
