@@ -119,8 +119,9 @@ body {
   line-height: 0.95;
   letter-spacing: 0.1em;
 }
-.logo span:first-child { color: #f5a030; text-shadow: calc(var(--px, 1px) * 2) calc(var(--px, 1px) * 2) 0 #8a2c2a; }
-.logo span:last-child { color: #e0642c; text-shadow: calc(var(--px, 1px) * 2) calc(var(--px, 1px) * 2) 0 #3a1830; }
+.logo span:nth-child(1) { font-size: 0.4em; letter-spacing: 0.4em; color: #fff1d6; margin-bottom: calc(var(--px, 1px) * 2); }
+.logo span:nth-child(2) { color: #f5a030; text-shadow: calc(var(--px, 1px) * 2) calc(var(--px, 1px) * 2) 0 #8a2c2a; }
+.logo span:nth-child(3) { color: #e0642c; text-shadow: calc(var(--px, 1px) * 2) calc(var(--px, 1px) * 2) 0 #3a1830; }
 
 #overlay .tagline { color: #bfe4ff; font-size: calc(var(--px, 1px) * 6); }
 #overlay .hint { font-size: calc(var(--px, 1px) * 5); opacity: 0.75; }

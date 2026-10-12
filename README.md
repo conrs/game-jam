@@ -1,4 +1,4 @@
-# Game Jam (working title)
+# The Last Leaf
 
 An autumn pixel-art survival game, hosted on [Betacade](https://betacade.com).
 
@@ -34,8 +34,8 @@ It uses the same Betacade token as Hold Fast (`~/.config/betacade/token`). The g
 
 `betacade.js` (Betacade's SDK, 1.0.0) ships in every build, so copies hosted elsewhere still send play data to the same Betacade game. Each copy has to name its Betacade build in `data-build` on the script tag (the repo keeps `0`, which sends nothing). Both deploy paths make a stamped copy:
 
-- `./deploy.sh` writes `dist/game-jam-itch-build<N>.zip`.
-- The GitHub Actions run keeps it as the `game-jam-itch-build<N>` artifact.
+- `./deploy.sh` writes `dist/the-last-leaf-itch-build<N>.zip`.
+- The GitHub Actions run keeps it as the `the-last-leaf-itch-build<N>` artifact.
 
 On itch.io: Kind of project → HTML, upload the zip, tick "This file will be played in the browser".
 

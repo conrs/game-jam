@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publish Game Jam to Betacade.
+# Publish The Last Leaf to Betacade.
 #   ./deploy.sh
 # Requires: curl, python3, tar (all ship with macOS).
 #
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 API="https://api.betacade.com"
-GAME_NAME="Game Jam"
+GAME_NAME="The Last Leaf"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 TOKEN_FILE="$HOME/.config/betacade/token"
 GAME_FILE="$ROOT/.betacade-game"
@@ -63,7 +63,7 @@ fail() {
 
 sign_in() {
   TOKEN=""
-  api POST /v1/device/authorize '{"clientName":"Game Jam deploy.sh"}'
+  api POST /v1/device/authorize '{"clientName":"The Last Leaf deploy.sh"}'
   [[ "$STATUS" == 200 ]] || fail "could not start sign-in"
   local device_code interval url code
   device_code="$(json_get deviceCode <<<"$RESP")"
@@ -165,7 +165,7 @@ echo "This build:    $(json_get buildUrl <<<"$RESP")"
 # itch.io lands on this build. Upload the zip to itch.io as an HTML game.
 
 mkdir -p "$ROOT/dist"
-ITCH_ZIP="$ROOT/dist/game-jam-itch-build$NUMBER.zip"
+ITCH_ZIP="$ROOT/dist/the-last-leaf-itch-build$NUMBER.zip"
 sed -i '' "s/data-build=\"[0-9]*\"/data-build=\"$NUMBER\"/" "$WORK/build/index.html"
 rm -f "$ITCH_ZIP"
 (cd "$WORK/build" && zip -qr "$ITCH_ZIP" .)

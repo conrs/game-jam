@@ -35,5 +35,5 @@ jobs:
       - name: Keep the itch.io copy
         uses: actions/upload-artifact@v4
         with:
-          name: game-jam-itch-build${{ steps.deploy.outputs.number }}
+          name: the-last-leaf-itch-build${{ steps.deploy.outputs.number }}
           path: /tmp/build/

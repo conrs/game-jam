@@ -1,4 +1,4 @@
-// Game Jam: the first snow can't fall until every leaf has touched the ground.
+// The Last Leaf: the first snow can't fall until every leaf has touched the ground.
 // Build fires under the tree; their warm air lifts leaves back up. Hold off winter.
 
 import * as sfx from './audio.js';
