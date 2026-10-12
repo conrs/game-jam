@@ -49,7 +49,9 @@ const ui = {
   result: document.getElementById('result'),
   scores: document.getElementById('scores'),
   you: document.getElementById('you'),
+  nameHint: document.getElementById('name-hint'),
   mute: document.getElementById('mute'),
+  fullscreen: document.getElementById('fullscreen'),
 };
 
 // --- Save (Betacade reads localStorage JSON) -----------------------------------
@@ -346,13 +348,17 @@ function endRun() {
       `The last leaf touched the ground.\nWinter held off for\n\n${fmtTime(run.t)}\n\n${line}\nLeaves rescued: ${run.rescues}`;
   };
   showResult(best ? 'NEW BEST!' : `Best ${fmtTime(save.bestTime)}`);
+  ui.nameHint.hidden = true;
   showScreen('gameover');
 
   // The global board keeps each player's best; the answer adds their rank (null when not sharing).
   window.wt?.submitScore?.(Math.round(run.t * 10) / 10)?.then((r) => {
     if (!r) return;
     myBoard = r;
-    if (s === run) showResult(`${best ? 'NEW BEST! ' : ''}#${r.rank} worldwide`);
+    if (s !== run) return;
+    showResult(`${best ? 'NEW BEST! ' : ''}#${r.rank} worldwide`);
+    // Only Betacade's play page can sign players in (its menu, not ours).
+    ui.nameHint.hidden = r.named || window.wt?.host !== 'betacade';
   });
 }
 
@@ -594,6 +600,8 @@ window.addEventListener('keydown', (e) => {
     lightFire(Number(e.key) - 1);
   } else if (e.key === 'm' || e.key === 'M') {
     updateMute(sfx.toggleMute());
+  } else if (e.key === 'f' || e.key === 'F') {
+    toggleFullscreen();
   } else if (!ui.overlay.hidden) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
@@ -623,6 +631,19 @@ ui.overlay.addEventListener('click', (e) => {
 ui.mute.addEventListener('click', () => {
   sfx.unlock();
   updateMute(sfx.toggleMute());
+});
+
+// Our own fullscreen button, so hosts' corner buttons (itch.io's) can stay off.
+// Hidden where the page can't go fullscreen (iPhone Safari, iframes without permission).
+function toggleFullscreen() {
+  if (!document.fullscreenEnabled) return;
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else document.documentElement.requestFullscreen().catch(() => {});
+}
+ui.fullscreen.hidden = !document.fullscreenEnabled;
+ui.fullscreen.addEventListener('click', () => {
+  sfx.unlock();
+  toggleFullscreen();
 });
 
 // --- Loop --------------------------------------------------------------------------
