@@ -271,10 +271,17 @@ button {
 #overlay button:active { border-image-source: url('art/ui/btn-pressed.png'); }
 
 /* Sound toggle: aria-pressed="true" means muted. */
-#mute {
+#corner {
   position: absolute;
   right: calc(var(--px, 1px) * 3);
   bottom: calc(var(--px, 1px) * 2);
+  display: flex;
+  flex-direction: row-reverse;
+  gap: calc(var(--px, 1px) * 2);
+}
+
+#mute {
+  flex: none;
   width: calc(var(--px, 1px) * 13);
   height: calc(var(--px, 1px) * 13);
   padding: 0;
@@ -293,10 +300,8 @@ button {
 
 /* Fullscreen sits left of mute, same 13x13 size, using the menu button's frame art
    (1px ends, 3px shadow) with a drawn frame icon on its face. */
-#fullscreen {
-  position: absolute;
-  right: calc(var(--px, 1px) * 18);
-  bottom: calc(var(--px, 1px) * 2);
+#fullscreen, #pause {
+  flex: none;
   width: calc(var(--px, 1px) * 13);
   height: calc(var(--px, 1px) * 13);
   padding: 0;
@@ -307,11 +312,22 @@ button {
   border-image: url('art/ui/btn-normal.png') 1 1 3 fill;
   image-rendering: pixelated;
 }
-#fullscreen[hidden] { display: none; }
+#fullscreen[hidden], #pause[hidden] { display: none; }
 @media (hover: hover) {
-  #fullscreen:hover { border-image-source: url('art/ui/btn-hover.png'); }
+  #fullscreen:hover, #pause:hover { border-image-source: url('art/ui/btn-hover.png'); }
 }
-#fullscreen:active { border-image-source: url('art/ui/btn-pressed.png'); }
+#fullscreen:active, #pause:active { border-image-source: url('art/ui/btn-pressed.png'); }
+
+/* Pause icon: two bars, drawn like the fullscreen frame. */
+#pause::before {
+  content: '';
+  display: block;
+  margin: auto;
+  width: calc(var(--px, 1px) * 5);
+  height: calc(var(--px, 1px) * 5);
+  border-left: calc(var(--px, 1px) * 2) solid #000;
+  border-right: calc(var(--px, 1px) * 2) solid #000;
+}
 #fullscreen::before {
   content: '';
   display: block;

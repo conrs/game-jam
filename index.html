@@ -59,7 +59,7 @@
         <h3 class="settings-heading">BETACADE</h3>
         <p id="player-status" class="sub"></p>
         <button type="button" id="player-btn">SIGN IN</button>
-        <button type="button" data-action="menu">BACK</button>
+        <button type="button" data-action="back">BACK</button>
       </section>
 
       <section class="screen panel" data-screen="credits" hidden>
@@ -79,6 +79,15 @@
         <button type="button" data-action="menu">BACK</button>
       </section>
 
+      <section class="screen" data-screen="pause" hidden>
+        <h2 class="gameover-title">PAUSED</h2>
+        <nav class="menu">
+          <button type="button" data-action="resume">RESUME</button>
+          <button type="button" data-action="settings">SETTINGS</button>
+          <button type="button" data-action="quit">QUIT TO MENU</button>
+        </nav>
+      </section>
+
       <section class="screen" data-screen="gameover" hidden>
         <h2 class="gameover-title">FIRST SNOW</h2>
         <p id="result"></p>
@@ -90,8 +99,12 @@
       </section>
     </div>
 
-    <button id="mute" type="button" aria-label="Mute" aria-pressed="false"></button>
-    <button id="fullscreen" type="button" aria-label="Fullscreen" aria-pressed="false" hidden></button>
+    <!-- Corner buttons, right to left: mute, fullscreen, pause (pause only during a run). -->
+    <div id="corner">
+      <button id="mute" type="button" aria-label="Mute" aria-pressed="false"></button>
+      <button id="fullscreen" type="button" aria-label="Fullscreen" aria-pressed="false" hidden></button>
+      <button id="pause" type="button" aria-label="Pause" hidden></button>
+    </div>
   </div>
 
   <script type="module" src="src/main.js"></script>

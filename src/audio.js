@@ -14,7 +14,7 @@ const TRACKS = {
   menu: 'assets/menu.mp3',
   game: 'assets/game.mp3',
 };
-const MUSIC_VOLUME = 0.5;
+const MUSIC_VOLUME = 0.3; // under the sound effects (playtest: music sat a touch loud)
 const FADE = 1.2; // seconds
 const playing = {};
 let wanted = null;
@@ -111,6 +111,12 @@ export function music(name) {
   const tr = track(wanted);
   startLoop(wanted).catch(() => {});
   fadeTo(tr.gain, MUSIC_VOLUME);
+}
+
+// The pause menu: the current track drops under, then comes back up on resume.
+export function duck(on) {
+  if (!ac || !wanted) return;
+  fadeTo(playing[wanted].gain, MUSIC_VOLUME * (on ? 0.4 : 1));
 }
 
 // Betacade pauses the game: freeze all audio where it is.

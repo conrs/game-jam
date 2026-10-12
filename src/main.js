@@ -55,6 +55,7 @@ const ui = {
   playerBtn: document.getElementById('player-btn'),
   mute: document.getElementById('mute'),
   fullscreen: document.getElementById('fullscreen'),
+  pauseBtn: document.getElementById('pause'),
 };
 
 // --- Save (Betacade reads localStorage JSON) -----------------------------------
@@ -75,6 +76,9 @@ const save = (() => {
   }
 })();
 
+let runPaused = false; // our own pause menu (Betacade's pause is `paused`, further down)
+let screen = null;    // the menu screen showing, or null while playing
+let settingsFrom = 'menu';
 let myBoard = null; // {best, rank, ...} from the last score sent to the global board
 let boardRequest = 0;
 
@@ -205,7 +209,7 @@ function counts() {
 }
 
 function lightFire(i) {
-  if (s.phase !== 'play') return;
+  if (s.phase !== 'play' || runPaused) return;
   const f = s.fires[i];
   if (s.logs < 1) {
     sfx.noLogs();
@@ -329,6 +333,7 @@ function update(dt) {
 
   if (counts().ground === LEAF_COUNT) {
     s.phase = 'storm';
+    ui.pauseBtn.hidden = true; // nothing left to pause
     sfx.snow();
     sfx.music('menu');
   }
@@ -519,9 +524,12 @@ function popup(text, x, y, kind = '') {
   setTimeout(() => el.remove(), 1300);
 }
 
-// Show one menu screen by name (menu, leaderboard, credits, gameover), or null to play.
+// Show one menu screen by name (menu, leaderboard, settings, credits, pause, gameover),
+// or null to play.
 function showScreen(name) {
+  screen = name;
   ui.overlay.hidden = !name;
+  ui.pauseBtn.hidden = Boolean(name) || s.phase !== 'play';
   stage.classList.toggle('menu-open', Boolean(name));
   for (const el of ui.screens) el.hidden = el.dataset.screen !== name;
   if (name === 'leaderboard') renderScores();
@@ -564,8 +572,38 @@ async function renderScores() {
 
 function menuAction(action) {
   if (action === 'play') return startRun();
+  if (action === 'resume') return resumeRun();
+  if (action === 'quit') return quitRun();
+  if (action === 'settings') settingsFrom = screen ?? 'menu';
+  if (action === 'back') return showScreen(settingsFrom);
   if (action === 'menu' && s.phase === 'over') s = makeState('title'); // fresh tree behind the menu
   showScreen(action);
+}
+
+// --- Pause ---------------------------------------------------------------------
+
+function pauseRun() {
+  if (s.phase !== 'play' || runPaused) return;
+  runPaused = true;
+  sfx.duck(true);
+  showScreen('pause');
+}
+
+function resumeRun() {
+  if (!runPaused) return;
+  runPaused = false;
+  last = null; // no time jump on the first frame back
+  sfx.duck(false);
+  showScreen(null);
+}
+
+// Ends the run without a score: a quit run never reaches the leaderboard.
+function quitRun() {
+  runPaused = false;
+  track('run.quit', { time: Math.round(s.t) });
+  s = makeState('title');
+  sfx.music('menu');
+  showScreen('menu');
 }
 
 // Arrow keys move between the visible buttons; Enter/Space press the focused one natively.
@@ -605,12 +643,16 @@ window.addEventListener('keydown', (e) => {
     updateMute(sfx.toggleMute());
   } else if (e.key === 'f' || e.key === 'F') {
     toggleFullscreen();
+  } else if (ui.overlay.hidden && (e.key === 'p' || e.key === 'P' || e.key === 'Escape')) {
+    pauseRun();
+  } else if (screen === 'pause' && (e.key === 'p' || e.key === 'P')) {
+    resumeRun();
   } else if (!ui.overlay.hidden) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       moveFocus(e.key === 'ArrowDown' ? 1 : -1);
     } else if (e.key === 'Escape') {
-      menuAction('menu');
+      menuAction(screen === 'pause' ? 'resume' : screen === 'settings' ? 'back' : 'menu');
     } else if ((e.key === 'Enter' || e.key === ' ') && !(document.activeElement instanceof HTMLButtonElement || document.activeElement instanceof HTMLInputElement)) {
       e.preventDefault();
       moveFocus(0);
@@ -623,6 +665,14 @@ function updateMute(muted) {
 }
 
 canvas.addEventListener('pointerdown', onPointer);
+ui.pauseBtn.addEventListener('click', () => {
+  sfx.unlock();
+  pauseRun();
+});
+// Leaving the tab pauses the run, so leaves don't fall while nobody's watching.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pauseRun();
+});
 // Any tap on the title screen starts the menu music (browsers block sound until a gesture).
 ui.overlay.addEventListener('pointerdown', () => sfx.unlock());
 // Pointing at a button selects it, so the mouse and the arrow keys share one highlight.
@@ -710,13 +760,14 @@ function frame(now) {
   if (paused) return;
   const dt = last === null ? 0 : Math.min(0.05, (now - last) / 1000);
   last = now;
-  update(dt);
+  if (!runPaused) update(dt);
   draw(now / 1000);
   updateHud();
 }
 
 // Betacade freezes rAF while paused; reset the frame delta so we don't jump on resume.
-window.addEventListener('wt:pause', () => { paused = true; sfx.pauseMusic(true); });
+// Its pause also opens ours, so the player comes back to a paused run, not a live one.
+window.addEventListener('wt:pause', () => { paused = true; sfx.pauseMusic(true); pauseRun(); });
 window.addEventListener('wt:resume', () => { paused = false; last = null; sfx.pauseMusic(false); });
 
 window.addEventListener('resize', fitStage);
