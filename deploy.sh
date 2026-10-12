@@ -139,7 +139,8 @@ if git -C "$ROOT" rev-parse --verify -q HEAD >/dev/null; then
   fi
 fi
 
-api POST "/v1/games/$GAME_ID/builds" "{\"mode\":\"archive\",\"sizeBytes\":$SIZE$SOURCE}" \
+# resumable: all lasting state (game-jam:save, game-jam:settings) is in localStorage, loaded at startup.
+api POST "/v1/games/$GAME_ID/builds" "{\"mode\":\"archive\",\"sizeBytes\":$SIZE,\"resumable\":true$SOURCE}" \
   -H "Idempotency-Key: $(uuidgen)"
 [[ "$STATUS" == 401 ]] && { rm -f "$TOKEN_FILE"; fail "token rejected; run again to sign in"; }
 [[ "$STATUS" =~ ^2 ]] || fail "could not start build"

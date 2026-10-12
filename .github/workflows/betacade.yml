@@ -24,7 +24,7 @@ jobs:
           start=$(curl -sS --fail-with-body -X POST "$API/v1/games/$GAME_ID/builds" \
             -H "Authorization: Bearer $BETACADE_TOKEN" -H "Content-Type: application/json" \
             -H "Idempotency-Key: $GITHUB_SHA-$GITHUB_RUN_ATTEMPT" \
-            -d "{\"mode\": \"archive\", \"sizeBytes\": $size, \"source\": {\"commit\": \"$GITHUB_SHA\", \"branch\": \"$GITHUB_REF_NAME\"}}")
+            -d "{\"mode\": \"archive\", \"sizeBytes\": $size, \"resumable\": true, \"source\": {\"commit\": \"$GITHUB_SHA\", \"branch\": \"$GITHUB_REF_NAME\"}}")
           number=$(echo "$start" | jq -r .number)
           curl -sS --fail-with-body -T /tmp/build.tar.gz "$(echo "$start" | jq -r .uploadUrl)"
           curl -sS --fail-with-body -X POST "$API/v1/games/$GAME_ID/builds/$number/finalize" \
